@@ -42,22 +42,22 @@ rnd <- select(rnd, states, `All R&D expenditures`)
 States_U <- as.data.frame(table(Unis$State, useNA = "ifany"))
 names(States_U) <- c("states", "universities")
 
-pop$states <- state.abb[match(pop$`State or territory`, state.name)]
-pop$states[pop$`State or territory` == "District of Columbia"] <- "DC"
-pop$population <- pop$`Population estimate, July 1, 2017[4]`
+pop$states <- state.abb[match(pop$Name, state.name)]
+pop$states[pop$Name == "District of Columbia"] <- "DC"
+pop$population <- pop$`Population estimate, July 1, 2018[5]`
 
 pop <- select(pop, states, population)
 pop <- filter(pop, !is.na(states))
 
-gdp$states <- state.abb[match(gdp$`State or territory`, state.name)]
-gdp$states[gdp$`State or territory` == "District of Columbia"] <- "DC"
+gdp$states <- state.abb[match(gdp$`Statefederal district or territory`, state.name)]
+gdp$states[gdp$`Statefederal district or territory` == "District of Columbia"] <- "DC"
 gdp$GDP <- gdp$`2017`
 
 gdp <- gdp %>% 
   select(states, GDP) %>%
   filter(!is.na(states))
 
-RND <- read.csv("~/Downloads/rnd.csv")
+RND <- read.csv("rnd.csv")
 RND <- RND %>%
   select(State, All.R.D) %>%
   filter(State != "")
@@ -73,7 +73,7 @@ Edu <- left_join(pop, gdp) %>%
   left_join(States_U)
 Edu$universities[is.na(Edu$universities)] <- 0
 
-Edu[, c(2:5)] <- lapply(Edu[, c(2:5)], function(x) {
+Edu[, c(13:16)] <- lapply(Edu[, c(13:16)], function(x) {
   gsub(",", "", x) %>%
     as.numeric(x)
 })
@@ -93,3 +93,13 @@ Edu$R_PC_rank <- rank(-Edu$R_per_cap, ties.method = c("min"))
 Edu$R_PG_rank <- rank(-Edu$R_per_gdp, ties.method = c("min"))
 
 Edu$Rscore <- Edu$U_PG_rank + Edu$R_PG_rank
+
+# Final results table
+
+State_rankings <- select(Edu, states, Rscore)
+State_rankings <- filter(State_rankings, !is.na(states))
+
+State_rankings <- State_rankings %>% mutate(Ranking = rank(Rscore))
+State_rankings <- State_rankings[order(State_rankings$Ranking), ]
+
+write.csv(State_rankings, "State_rankings.csv")
